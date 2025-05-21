@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import pg from "pg";
 import dotenv from "dotenv";
+import crypto from "crypto";
 dotenv.config();
 
 //Constants
@@ -30,7 +31,7 @@ App.use(cors());
 App.use(express.json());
 
 App.get("/", (Request, Response) => {
-    Response.json("Hello World!");
+    Response.json("API Response Sucessful!");
 });
 
 App.get("/fetch-messages", async (_, Response) => {
@@ -42,14 +43,50 @@ App.get("/fetch-messages", async (_, Response) => {
     }
 });
 
+
+function GetIPHash(Request) {
+    const ip = Request.headers["x-forwarded-for"] || Request.socket.remoteAddress;
+    return crypto.createHash("sha256").update(ip.toString()).digest("hex");
+}
+App.get("/get-hash", (Request, Response) => {
+    const IPHash = GetIPHash(Request);
+    Response.json({ IPHash });
+});
+
 App.post("/add-message", async (Request, Response) => {
-    const { Username, MessageContent } = Request.body;
+    const { Username, MessageContent, PfpURL } = Request.body;
     if (!Username || !MessageContent) {
         return Response.status(400).json({ Error: "Name and message are required" });
     }
+    const IPHash = GetIPHash(Request)
     try {
-        await Database.query("INSERT INTO messages (Username, MessageContent) VALUES ($1, $2)", [Username, MessageContent]);
+        await Database.query(
+            "INSERT INTO messages (Username, MessageContent, PfpURL, IPHash) VALUES ($1, $2, $3, $4)",
+            [Username, MessageContent, PfpURL, IPHash]
+        );
         Response.status(201).json({ Success: "Message added successfully" });
+    } catch (Error) {
+        console.error("Error adding message:", Error);
+        Response.status(500).json({ Error: "Internal server error" });
+    }
+});
+
+
+App.post("/delete-message", async (Request, Response) => {
+    const { MessageID } = Request.body;
+    if (!MessageID) {
+        return Response.status(400).json({ Error: "Message ID is required" });
+    }
+    const IPHash = GetIPHash(Request);
+    try {
+        const Result = await Database.query(
+            "DELETE FROM messages WHERE MessageID = $1 AND IPHash = $2",
+            [MessageID, IPHash]
+        );
+        if (Result.rowCount === 0) {
+            return Response.status(404).json({ Error: "Message not found or unauthorized" });
+        }
+        Response.json({ Success: "Message deleted successfully" });
     } catch (Error) {
         Response.status(500).json({ Error: "Internal server error" });
     }
