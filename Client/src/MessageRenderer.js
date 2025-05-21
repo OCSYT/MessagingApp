@@ -99,7 +99,6 @@ export default class MessageRenderer {
           const NewLine = document.createElement("br");
           ParentElement.appendChild(NewLine);
           ParentElement.appendChild(Audio);
-          console.log("Audio loaded");
           MessageRenderer.ScrollToBottom();
         };
       };
