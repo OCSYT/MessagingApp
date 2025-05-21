@@ -3,8 +3,6 @@ import cors from "cors";
 import pg from "pg";
 import dotenv from "dotenv";
 import session from "express-session";
-import file_store from "session-file-store";
-import f from "session-file-store";
 dotenv.config();
 
 const App = express();
@@ -20,15 +18,9 @@ if (!SessionSecret) {
 }
 
 App.set("trust proxy", true);
-const FileStore = file_store(session);
 
 App.use(
   session({
-    store: new FileStore({
-      path: "./sessions",
-      ttl: 1000 * 60 * 60 * 24 * 365 * 5,
-      retries: 0,
-    }),
     secret: SessionSecret,
     saveUninitialized: true,
     resave: false,
