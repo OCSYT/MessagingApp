@@ -17,13 +17,14 @@ if (!SessionSecret) {
     SessionSecret = Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+App.set('trust proxy', true);
 App.use(
     session({
         secret: SessionSecret,
         saveUninitialized: true,
         resave: false,
         cookie: {
-            secure: false,
+            secure: true,
             sameSite: false,
         },
     })
