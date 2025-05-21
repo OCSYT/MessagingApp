@@ -1,5 +1,5 @@
-import './Style.css'
-const ServerUrl = "https://messagingapp-server.onrender.com"
+import "./Style.css";
+const ServerUrl = "https://messagingapp-server.onrender.com";
 //const ServerUrl = "http://localhost:8080";
 const MessageContainer = document.getElementById("MessageContainer");
 const MessageForm = document.getElementById("MessageForm");
@@ -7,7 +7,9 @@ let UserSessionID = null;
 
 async function GetHash() {
   try {
-    const Response = await fetch(`${ServerUrl}/get-hash`);
+    const Response = await fetch(`${ServerUrl}/get-hash`, {
+      credentials: "include",
+    });
     const Data = await Response.json();
     return Data.SessionID;
   } catch (Error) {
@@ -32,7 +34,9 @@ function SubmitForm(Event) {
   const FormDataObj = GetFormData();
   const Username = FormDataObj.Username;
   const MessageContent = FormDataObj.MessageContent;
-  const PfpURL = FormDataObj.PfpURL || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+  const PfpURL =
+    FormDataObj.PfpURL ||
+    "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
   if (!Username || !MessageContent) {
     alert("Name and message are required");
     return;
@@ -40,6 +44,7 @@ function SubmitForm(Event) {
   const Data = { Username, MessageContent, PfpURL };
   fetch(`${ServerUrl}/add-message`, {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
@@ -50,7 +55,7 @@ function SubmitForm(Event) {
       if (ResponseData.Error) {
         alert(ResponseData.Error);
       } else {
-        MessageForm[1].value = '';
+        MessageForm[2].value = "";
         console.log("Message added successfully");
       }
     })
@@ -62,11 +67,13 @@ function SubmitForm(Event) {
 let LastMessageIds = new Set();
 
 function FetchMessages() {
-  fetch(`${ServerUrl}/fetch-messages`)
+  fetch(`${ServerUrl}/fetch-messages`, {
+    credentials: "include",
+  })
     .then((Response) => Response.json())
     .then((Data) => {
-      const CurrentIds = new Set(Data.map(Msg => Msg.MessageId));
-      Array.from(MessageContainer.children).forEach(Child => {
+      const CurrentIds = new Set(Data.map((Msg) => Msg.MessageId));
+      Array.from(MessageContainer.children).forEach((Child) => {
         const MessageID = Child.dataset && Child.dataset.messageid;
         if (MessageID && !CurrentIds.has(MessageID)) {
           MessageContainer.removeChild(Child);
@@ -74,7 +81,9 @@ function FetchMessages() {
         }
       });
 
-      const NewMessages = Data.filter(Message => !LastMessageIds.has(Message.messageid));
+      const NewMessages = Data.filter(
+        (Message) => !LastMessageIds.has(Message.messageid)
+      );
       NewMessages.reverse().forEach((Message) => {
         const MessageElement = document.createElement("div");
         MessageElement.className = "Message";
@@ -82,7 +91,9 @@ function FetchMessages() {
 
         // Add profile picture image
         const PfpImg = document.createElement("img");
-        PfpImg.src = Message.pfpurl || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+        PfpImg.src =
+          Message.pfpurl ||
+          "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
         PfpImg.alt = "Pfp";
         PfpImg.className = "Pfp";
         PfpImg.style.width = "50px";
@@ -104,9 +115,15 @@ function FetchMessages() {
         const Strong = document.createElement("strong");
         Strong.textContent = Message.username;
         MessageElement.appendChild(Strong);
-        MessageElement.appendChild(document.createTextNode(`: ${Message.messagecontent}`));
+        MessageElement.appendChild(
+          document.createTextNode(`: ${Message.messagecontent}`)
+        );
 
-        if (UserSessionID && Message.sessionhash && UserSessionID === Message.sessionhash) {
+        if (
+          UserSessionID &&
+          Message.sessionhash &&
+          UserSessionID === Message.sessionhash
+        ) {
           const Button = document.createElement("button");
           Button.textContent = "Delete";
           Button.className = "Delete";
@@ -129,6 +146,7 @@ function FetchMessages() {
 function DeleteMessage(MessageID) {
   fetch(`${ServerUrl}/delete-message`, {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
