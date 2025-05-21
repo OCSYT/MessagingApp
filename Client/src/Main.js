@@ -188,6 +188,7 @@ async function AddImages(Text, ParentElement) {
       const NewLine = document.createElement("br");
       ParentElement.appendChild(NewLine);
       ParentElement.appendChild(Img);
+      ScrollToBottom();
     };
     Img.onerror = function () {
       // Not an image or failed to load, do nothing
