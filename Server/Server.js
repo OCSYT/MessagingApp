@@ -24,7 +24,7 @@ App.use(
         resave: false,
         cookie: {
             secure: false,
-            sameSite: true,
+            sameSite: false,
         },
     })
 );
@@ -64,12 +64,12 @@ App.get("/fetch-messages", async (_, Response) => {
 });
 
 function GetSessionID(Request) {
-  return Request.SessionID;
+  return Request.session.id;
 }
 
 App.get("/get-hash", (Request, Response) => {
   const SessionID = GetSessionID(Request);
-  Response.json({ SessionID });
+  Response.json({ SessionID: SessionID });
 });
 
 App.post("/add-message", async (Request, Response) => {
