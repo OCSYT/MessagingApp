@@ -199,7 +199,6 @@ function AddMedia(Text, ParentElement) {
   if (!Matches) return;
 
   for (const Url of Matches) {
-    // Try to add video
     const Video = document.createElement("video");
     Video.src = Url;
     Video.controls = true;
