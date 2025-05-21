@@ -44,10 +44,17 @@ App.get("/fetch-messages", async (_, Response) => {
 });
 
 
-function GetIPHash(Request) {
-    const ip = Request.headers["x-forwarded-for"] || Request.socket.remoteAddress;
-    return crypto.createHash("sha256").update(ip.toString()).digest("hex");
+function GetIpHash(Request) {
+    let IP = Request.headers["x-forwarded-for"] || Request.socket.remoteAddress || "";
+    if (typeof IP === "string" && IP.includes(",")) {
+        IP = IP.split(",")[0].trim();
+    }
+    if (IP === "::1" || IP === "127.0.0.1") {
+        IP = "localhost";
+    }
+    return crypto.createHash("sha256").update(ip).digest("hex");
 }
+
 App.get("/get-hash", (Request, Response) => {
     const IPHash = GetIPHash(Request);
     Response.json({ IPHash });
