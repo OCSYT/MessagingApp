@@ -158,7 +158,7 @@ async function CreateMessageElement(Message) {
   MessageElement.appendChild(document.createTextNode(`: ${MessageContent}`));
 
   await AddImages(MessageContent, MessageElement);
-
+  await AddVideos(MessageContent, MessageElement);
   if (
     UserSessionID &&
     Message.sessionhash &&
@@ -192,6 +192,31 @@ async function AddImages(Text, ParentElement) {
     };
     Img.onerror = function () {
       // Not an image or failed to load, do nothing
+    };
+  }
+}
+
+async function AddVideos(Text, ParentElement) {
+  const UrlRegex = /(https?:\/\/[^\s]+)/gi;
+  const Matches = Text.match(UrlRegex);
+  if (!Matches) return;
+
+  for (const Url of Matches) {
+    const Video = document.createElement("video");
+    Video.src = Url;
+    Video.controls = true;
+    Video.className = "EmbeddedVideo";
+    Video.style.width = "600px";
+    Video.style.display = "block";
+    Video.style.marginTop = "8px";
+    Video.onloadeddata = function () {
+      const NewLine = document.createElement("br");
+      ParentElement.appendChild(NewLine);
+      ParentElement.appendChild(Video);
+      ScrollToBottom();
+    };
+    Video.onerror = function () {
+      // Not a video or failed to load, do nothing
     };
   }
 }
