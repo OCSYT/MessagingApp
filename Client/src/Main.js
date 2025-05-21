@@ -113,11 +113,8 @@ function RemoveStaleMessages(NewMessageMap) {
 async function AddOrUpdateMessages(Data, NewMessageMap) {
   let MessageAppended = false;
   for (let i = Data.length - 1; i >= 0; i--) {
-    if (AllowAddingMessages == false) {
-      continue;
-    }
     const Message = Data[i];
-    if (!CurrentMessages.has(Message.messageid)) {
+    if (!CurrentMessages.has(Message.messageid) && AllowAddingMessages) {
       AllowAddingMessages = false;
       const MessageElement = await CreateMessageElement(Message, NewMessageMap);
       const Inserted = InsertMessageElement(
@@ -158,7 +155,7 @@ async function CreateMessageElement(Message) {
   MessageElement.appendChild(document.createTextNode(`: ${MessageContent}`));
 
   await AddImages(MessageContent, MessageElement);
-  await AddVideos(MessageContent, MessageElement);
+  AddMedia(MessageContent, MessageElement);
   if (
     UserSessionID &&
     Message.sessionhash &&
@@ -196,12 +193,13 @@ async function AddImages(Text, ParentElement) {
   }
 }
 
-async function AddVideos(Text, ParentElement) {
+function AddMedia(Text, ParentElement) {
   const UrlRegex = /(https?:\/\/[^\s]+)/gi;
   const Matches = Text.match(UrlRegex);
   if (!Matches) return;
 
   for (const Url of Matches) {
+    // Try to add video
     const Video = document.createElement("video");
     Video.src = Url;
     Video.controls = true;
@@ -209,15 +207,42 @@ async function AddVideos(Text, ParentElement) {
     Video.style.width = "600px";
     Video.style.display = "block";
     Video.style.marginTop = "8px";
+    let VideoHandled = false;
+
+    const CreateAudio = () => {
+      const Audio = document.createElement("audio");
+      Audio.src = Url;
+      Audio.controls = true;
+      Audio.className = "EmbeddedAudio";
+      Audio.style.display = "block";
+      Audio.style.marginTop = "8px";
+      Audio.onloadeddata = function () {
+        const NewLine = document.createElement("br");
+        ParentElement.appendChild(NewLine);
+        ParentElement.appendChild(Audio);
+        console.log("Audio loaded");
+        ScrollToBottom();
+      };
+    };
+
     Video.onloadeddata = function () {
-      const NewLine = document.createElement("br");
-      ParentElement.appendChild(NewLine);
-      ParentElement.appendChild(Video);
-      ScrollToBottom();
+      console.log(Video.videoWidth);
+      if (Video.videoWidth > 0 && Video.videoHeight > 0 && !VideoHandled) {
+        const NewLine = document.createElement("br");
+        ParentElement.appendChild(NewLine);
+        ParentElement.appendChild(Video);
+        ScrollToBottom();
+        VideoHandled = true;
+      } else {
+        CreateAudio();
+      }
     };
-    Video.onerror = function () {
-      // Not a video or failed to load, do nothing
+    Video.onerror = function (Error) {
+      if (!VideoHandled) {
+        CreateAudio();
+      }
     };
+    VideoHandled = false;
   }
 }
 
@@ -262,20 +287,16 @@ function CreateDeleteButton(MessageId) {
 }
 
 function InsertMessageElement(MessageElement, Message, NewMessageMap) {
-  const Messages = MessageContainer.children;
-  for (let i = Messages.length - 1; i >= 0; i--) {
-    const ExistingMessageId = Messages[i].dataset.messageid;
-    const ExistingMessage = NewMessageMap.get(ExistingMessageId);
-    if (ExistingMessage) {
-      const ExistingTimestamp = new Date(ExistingMessage.timestamp);
-      const NewTimestamp = new Date(Message.timestamp);
-      if (NewTimestamp > ExistingTimestamp) {
-        MessageContainer.insertBefore(MessageElement, Messages[i]);
-        return true;
-      }
-    }
-  }
-  return false;
+  MessageContainer.appendChild(MessageElement);
+  const MessagesArray = Array.from(MessageContainer.children);
+  MessagesArray.sort((A, B) => {
+    const IdA = parseInt(A.dataset.messageid, 10);
+    const IdB = parseInt(B.dataset.messageid, 10);
+    return IdA - IdB;
+  });
+  MessagesArray.forEach((Msg) => MessageContainer.appendChild(Msg));
+
+  return true;
 }
 
 function ScrollToBottom() {
