@@ -54,7 +54,7 @@ App.get("/", (Request, Response) => {
   Response.json("API Response Sucessful!");
 });
 
-App.get("/fetch-messages", async (_, Response) => {
+App.get("/fetch-messages", async (Request, Response) => {
   try {
     const Result = await Database.query(
       "SELECT * FROM messages ORDER BY MessageID DESC LIMIT $1",
