@@ -79,6 +79,32 @@ export default class MessageRenderer {
     if (!Matches) return;
 
     for (const Url of Matches) {
+      // YouTube embed
+      const YouTubeMatch = Url.match(
+        /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/
+      );
+      if (YouTubeMatch) {
+        const VideoId = YouTubeMatch[1];
+        const Iframe = document.createElement("iframe");
+        Iframe.src = `https://www.youtube.com/embed/${VideoId}`;
+        Iframe.width = "560";
+        Iframe.height = "315";
+        Iframe.style.border = "none";
+        Iframe.allow =
+          "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+        Iframe.allowFullscreen = true;
+        Iframe.className = "EmbeddedYouTube";
+        Iframe.style.display = "block";
+        Iframe.style.marginTop = "8px";
+        const NewLine = document.createElement("br");
+        ParentElement.appendChild(NewLine);
+        ParentElement.appendChild(Iframe);
+        console.log("YouTube video embedded:", Url);
+        MessageRenderer.ScrollToBottom();
+        continue;
+      }
+
+      // Video embed
       const Video = document.createElement("video");
       Video.src = Url;
       Video.controls = true;
@@ -156,15 +182,21 @@ export default class MessageRenderer {
     return MessageElement;
   }
 
-  static InsertMessageElement(MessageElement, Message, NewMessageMap) {
+  static InsertMessageElement(MessageElement, Message) {
+    const NewId = parseInt(Message.messageid, 10);
+    const Children = this.MessageContainer.children;
+
+    for (let i = 0; i < Children.length; i++) {
+      const ChildId = parseInt(Children[i].dataset.messageid, 10);
+      if (NewId < ChildId) {
+        this.MessageContainer.insertBefore(MessageElement, Children[i]);
+        return true;
+      }
+    }
+
+    // If no smaller ID was found, it's the newest
     this.MessageContainer.appendChild(MessageElement);
-    const MessagesArray = Array.from(this.MessageContainer.children);
-    MessagesArray.sort((A, B) => {
-      const IdA = parseInt(A.dataset.messageid, 10);
-      const IdB = parseInt(B.dataset.messageid, 10);
-      return IdA - IdB;
-    });
-    MessagesArray.forEach((Msg) => this.MessageContainer.appendChild(Msg));
+    this.ScrollToBottom();
     return true;
   }
 }
