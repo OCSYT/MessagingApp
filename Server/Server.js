@@ -11,16 +11,22 @@ const Database = new pg.Pool({
   connectionString: process.env.DB_URL,
 });
 
+// Generate random session secret if not found
+let SessionSecret = process.env.SESSION_SECRET;
+if (!SessionSecret) {
+    SessionSecret = Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
 App.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    saveUninitialized: true,
-    resave: false,
-    cookie: {
-      secure: false,
-      sameSite: true,
-    },
-  })
+    session({
+        secret: SessionSecret,
+        saveUninitialized: true,
+        resave: false,
+        cookie: {
+            secure: false,
+            sameSite: true,
+        },
+    })
 );
 
 function CheckDatabaseConnection() {
@@ -57,7 +63,6 @@ App.get("/fetch-messages", async (_, Response) => {
   }
 });
 
-// Use session ID instead of IP hash
 function GetSessionID(Request) {
   return Request.SessionID;
 }
