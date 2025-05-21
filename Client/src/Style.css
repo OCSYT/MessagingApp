@@ -1,0 +1,69 @@
+body {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+    margin: 0;
+  padding: 0;
+
+}
+
+#app {
+  max-width: 1000px;
+  margin: 40px auto;
+  color: white;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+#MessageContainer {
+  min-height: 200px;
+  margin-bottom: 20px;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-y: auto;
+  height: 500px;
+  max-height: 500px;
+  overflow-wrap: break-word;
+}
+
+#MessageForm {
+  display: flex;
+  gap: 8px;
+}
+
+#Username,
+#MessageContent {
+  flex: 1;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 1em;
+  width: 100%;
+}
+
+button {
+  padding: 8px 16px;
+  background: #00ffff;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  color: black;
+}
+
+button:hover {
+  background: #000000;
+  color: white;
+}
+
+input{
+  background-color: black;
+  color: white;
+  border: none;
+}
