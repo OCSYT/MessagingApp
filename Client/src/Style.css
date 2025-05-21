@@ -82,7 +82,6 @@ button:hover {
   font-weight: bold;
   cursor: pointer;
   color: white;
-  transition: background 0.2s;
   margin: 8px;
   font-size: 10px;
   position: relative;
