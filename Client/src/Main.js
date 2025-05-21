@@ -4,6 +4,7 @@ const ServerUrl = "https://messagingapp-server.onrender.com";
 const MessageContainer = document.getElementById("MessageContainer");
 const MessageForm = document.getElementById("MessageForm");
 let UserSessionID = null;
+let AllowAddingMessages = true;
 
 async function GetHash() {
   try {
@@ -69,115 +70,194 @@ function SubmitForm(Event) {
     });
 }
 
-let CurrentMessages = new Map(); // Stores message elements by their ID
+let CurrentMessages = new Map();
 
 async function FetchMessages() {
-  if (UserSessionID === null) {
-    return;
-  }
+  if (UserSessionID === null) return;
+
   try {
-    const Response = await fetch(`${ServerUrl}/fetch-messages`, {
-      credentials: "include",
-    });
-    const Data = await Response.json();
-    const NewMessageMap = new Map(Data.map((msg) => [msg.messageid, msg]));
+    const Data = await GetMessagesFromServer();
+    const NewMessageMap = CreateMessageMap(Data);
 
-    // Remove messages that no longer exist
-    CurrentMessages.forEach((element, id) => {
-      if (!NewMessageMap.has(id)) {
-        element.remove();
-        CurrentMessages.delete(id);
-      }
-    });
+    RemoveStaleMessages(NewMessageMap);
+    const MessageAppended = await AddOrUpdateMessages(Data, NewMessageMap);
 
-    // Add or update messages
-    let messageAppended = false;
-    Data.slice()
-      .reverse()
-      .forEach((Message) => {
-        if (!CurrentMessages.has(Message.messageid)) {
-          const MessageElement = document.createElement("div");
-          MessageElement.className = "Message";
-          MessageElement.dataset.messageid = Message.messageid;
-
-          const PfpImg = document.createElement("img");
-          PfpImg.src =
-            Message.pfpurl ||
-            "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
-          PfpImg.onerror = function () {
-            this.onerror = null;
-            this.src =
-              "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
-          };
-
-          PfpImg.alt = "Pfp";
-          PfpImg.className = "Pfp";
-          PfpImg.style.width = "50px";
-          MessageElement.appendChild(PfpImg);
-
-          const Timestamp = new Date(Message.timestamp);
-          const TimeString = Timestamp.toLocaleString([], {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-          const TimeElement = document.createElement("small");
-          TimeElement.className = "Time";
-          TimeElement.textContent = TimeString;
-          MessageElement.appendChild(TimeElement);
-
-          const Strong = document.createElement("strong");
-          Strong.textContent = Message.username;
-          MessageElement.appendChild(Strong);
-          MessageElement.appendChild(
-            document.createTextNode(`: ${Message.messagecontent}`)
-          );
-
-          if (
-            UserSessionID &&
-            Message.sessionhash &&
-            UserSessionID === Message.sessionhash
-          ) {
-            const Button = document.createElement("button");
-            Button.textContent = "Delete";
-            Button.className = "Delete";
-            Button.onclick = () => DeleteMessage(Message.messageid);
-            MessageElement.appendChild(Button);
-          }
-
-          // Insert the new message in the correct position
-          let Inserted = false;
-          const Messages = MessageContainer.children;
-          for (let I = 0; I < Messages.length; I++) {
-            const ExistingMessageId = Messages[I].dataset.messageid;
-            const ExistingMessage = NewMessageMap.get(ExistingMessageId);
-            if (ExistingMessage) {
-              const ExistingTimestamp = new Date(ExistingMessage.timestamp);
-              const NewTimestamp = new Date(Message.timestamp);
-              if (NewTimestamp > ExistingTimestamp) {
-                MessageContainer.insertBefore(MessageElement, Messages[I]);
-                Inserted = true;
-                break;
-              }
-            }
-          }
-          if (!Inserted) {
-            MessageContainer.appendChild(MessageElement);
-            messageAppended = true;
-          }
-          CurrentMessages.set(Message.messageid, MessageElement);
-        }
-      });
-
-    // Scroll to bottom if a new message was appended
-    if (messageAppended) {
-      MessageContainer.scrollTop = MessageContainer.scrollHeight;
+    if (MessageAppended) {
+      ScrollToBottom();
     }
   } catch (Error) {
     console.error("Error fetching messages:", Error);
   }
+}
+
+async function GetMessagesFromServer() {
+  const Response = await fetch(`${ServerUrl}/fetch-messages`, {
+    credentials: "include",
+  });
+  return await Response.json();
+}
+
+function CreateMessageMap(Data) {
+  return new Map(Data.map((msg) => [msg.messageid, msg]));
+}
+
+function RemoveStaleMessages(NewMessageMap) {
+  CurrentMessages.forEach((element, id) => {
+    if (!NewMessageMap.has(id)) {
+      element.remove();
+      CurrentMessages.delete(id);
+    }
+  });
+}
+
+async function AddOrUpdateMessages(Data, NewMessageMap) {
+  let MessageAppended = false;
+  for (let i = Data.length - 1; i >= 0; i--) {
+    if (AllowAddingMessages == false) {
+      continue;
+    }
+    const Message = Data[i];
+    if (!CurrentMessages.has(Message.messageid)) {
+      AllowAddingMessages = false;
+      const MessageElement = await CreateMessageElement(Message, NewMessageMap);
+      const Inserted = InsertMessageElement(
+        MessageElement,
+        Message,
+        NewMessageMap
+      );
+
+      if (!Inserted) {
+        MessageContainer.appendChild(MessageElement);
+        MessageAppended = true;
+      }
+
+      CurrentMessages.set(Message.messageid, MessageElement);
+      AllowAddingMessages = true;
+    }
+  }
+
+  return MessageAppended;
+}
+
+async function CreateMessageElement(Message) {
+  const MessageElement = document.createElement("div");
+  MessageElement.className = "Message";
+  MessageElement.dataset.messageid = Message.messageid;
+
+  const PfpImg = CreateProfileImage(Message.pfpurl);
+  MessageElement.appendChild(PfpImg);
+
+  const TimeElement = CreateTimestampElement(Message.timestamp);
+  MessageElement.appendChild(TimeElement);
+
+  const Strong = document.createElement("strong");
+  Strong.textContent = Message.username;
+  MessageElement.appendChild(Strong);
+
+  const MessageContent = Message.messagecontent;
+  MessageElement.appendChild(document.createTextNode(`: ${MessageContent}`));
+
+  await AddImages(MessageContent, MessageElement);
+
+  if (
+    UserSessionID &&
+    Message.sessionhash &&
+    UserSessionID === Message.sessionhash
+  ) {
+    const Button = CreateDeleteButton(Message.messageid);
+    MessageElement.appendChild(Button);
+  }
+
+  return MessageElement;
+}
+
+async function AddImages(Text, ParentElement) {
+  const UrlRegex = /(https?:\/\/[^\s]+)/gi;
+  const Matches = Text.match(UrlRegex);
+  if (!Matches) return;
+
+  for (const Url of Matches) {
+    try {
+      const Response = await fetch(Url, { method: "HEAD" });
+
+      const ContentType = Response.headers.get("Content-Type");
+      if (ContentType && ContentType.startsWith("image/")) {
+        const NewLine = document.createElement("br");
+        ParentElement.appendChild(NewLine);
+        const Img = document.createElement("img");
+        Img.src = Url;
+        Img.alt = "Embedded Image";
+        Img.className = "EmbeddedImage";
+        Img.style.width = "300px";
+        Img.style.display = "block";
+        Img.style.marginTop = "8px";
+        ParentElement.appendChild(Img);
+      }
+    } catch (Error) {
+      console.warn("Failed to check image URL:", Url, Error);
+    }
+  }
+}
+
+function CreateProfileImage(Url) {
+  const Img = document.createElement("img");
+  Img.src =
+    Url ||
+    "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+  Img.onerror = function () {
+    this.onerror = null;
+    this.src =
+      "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+  };
+  Img.alt = "Pfp";
+  Img.className = "Pfp";
+  Img.style.width = "50px";
+  return Img;
+}
+
+function CreateTimestampElement(Timestamp) {
+  const DateObj = new Date(Timestamp);
+  const TimeString = DateObj.toLocaleString([], {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const TimeElement = document.createElement("small");
+  TimeElement.className = "Time";
+  TimeElement.textContent = TimeString;
+  return TimeElement;
+}
+
+function CreateDeleteButton(MessageId) {
+  const Button = document.createElement("button");
+  Button.textContent = "Delete";
+  Button.className = "Delete";
+  Button.onclick = () => DeleteMessage(MessageId);
+  return Button;
+}
+
+function InsertMessageElement(MessageElement, Message, NewMessageMap) {
+  const Messages = MessageContainer.children;
+  for (let i = Messages.length - 1; i >= 0; i--) {
+    const ExistingMessageId = Messages[i].dataset.messageid;
+    const ExistingMessage = NewMessageMap.get(ExistingMessageId);
+    if (ExistingMessage) {
+      const ExistingTimestamp = new Date(ExistingMessage.timestamp);
+      const NewTimestamp = new Date(Message.timestamp);
+      if (NewTimestamp > ExistingTimestamp) {
+        MessageContainer.insertBefore(MessageElement, Messages[i]);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function ScrollToBottom() {
+  MessageContainer.scrollTop = MessageContainer.scrollHeight;
 }
 
 function DeleteMessage(MessageID) {
@@ -205,9 +285,9 @@ function DeleteMessage(MessageID) {
     });
 }
 
-setInterval(() => {
+setInterval(async () => {
   if (UserSessionID === null) {
     return;
   }
-  FetchMessages();
+  await FetchMessages();
 }, 100);
