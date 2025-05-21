@@ -31,6 +31,9 @@ function GetFormData() {
 MessageForm.addEventListener("submit", SubmitForm);
 function SubmitForm(Event) {
   Event.preventDefault();
+  if (UserSessionID === null) {
+    return;
+  }
   const FormDataObj = GetFormData();
   const Username = FormDataObj.Username;
   const MessageContent = FormDataObj.MessageContent;
@@ -69,6 +72,9 @@ function SubmitForm(Event) {
 let CurrentMessages = new Map(); // Stores message elements by their ID
 
 async function FetchMessages() {
+  if (UserSessionID === null) {
+    return;
+  }
   try {
     const Response = await fetch(`${ServerUrl}/fetch-messages`, {
       credentials: "include",
@@ -95,13 +101,14 @@ async function FetchMessages() {
           MessageElement.dataset.messageid = Message.messageid;
 
           const PfpImg = document.createElement("img");
-            PfpImg.src =
+          PfpImg.src =
             Message.pfpurl ||
             "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
-            PfpImg.onerror = function () {
+          PfpImg.onerror = function () {
             this.onerror = null;
-            this.src = "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
-            };
+            this.src =
+              "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+          };
 
           PfpImg.alt = "Pfp";
           PfpImg.className = "Pfp";
@@ -174,6 +181,9 @@ async function FetchMessages() {
 }
 
 function DeleteMessage(MessageID) {
+  if (UserSessionID === null) {
+    return;
+  }
   fetch(`${ServerUrl}/delete-message`, {
     method: "POST",
     credentials: "include",
@@ -196,7 +206,7 @@ function DeleteMessage(MessageID) {
 }
 
 setInterval(() => {
-  if(UserSessionID === null) {
+  if (UserSessionID === null) {
     return;
   }
   FetchMessages();
