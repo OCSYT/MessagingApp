@@ -12,5 +12,5 @@ import MessageManager from "./MessageManager.js";
       return;
     }
     await MessageManager.FetchMessages();
-  }, 100);
+  }, 500);
 })();
