@@ -38,6 +38,10 @@ h1 {
   gap: 8px;
 }
 
+.Message{
+  margin-top: 25px;
+}
+
 #Username,
 #MessageContent {
   flex: 1;

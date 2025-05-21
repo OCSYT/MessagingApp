@@ -37,6 +37,9 @@ function SubmitForm(Event) {
   const PfpURL =
     FormDataObj.PfpURL ||
     "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+
+  MessageForm[2].value = "";
+
   if (!Username || !MessageContent) {
     alert("Name and message are required");
     return;
@@ -55,7 +58,6 @@ function SubmitForm(Event) {
       if (ResponseData.Error) {
         alert(ResponseData.Error);
       } else {
-        MessageForm[2].value = "";
         console.log("Message added successfully");
       }
     })
@@ -64,83 +66,106 @@ function SubmitForm(Event) {
     });
 }
 
-let LastMessageIds = new Set();
+let CurrentMessages = new Map(); // Stores message elements by their ID
 
-function FetchMessages() {
-  fetch(`${ServerUrl}/fetch-messages`, {
-    credentials: "include",
-  })
-    .then((Response) => Response.json())
-    .then((Data) => {
-      const CurrentIds = new Set(Data.map((Msg) => Msg.MessageId));
-      Array.from(MessageContainer.children).forEach((Child) => {
-        const MessageID = Child.dataset && Child.dataset.messageid;
-        if (MessageID && !CurrentIds.has(MessageID)) {
-          MessageContainer.removeChild(Child);
-          LastMessageIds.delete(MessageID);
-        }
-      });
-
-      const NewMessages = Data.filter(
-        (Message) => !LastMessageIds.has(Message.messageid)
-      );
-      NewMessages.reverse().forEach((Message) => {
-        const MessageElement = document.createElement("div");
-        MessageElement.className = "Message";
-        MessageElement.dataset.messageid = Message.messageid;
-
-        // Add profile picture image
-        const PfpImg = document.createElement("img");
-        PfpImg.src =
-          Message.pfpurl ||
-          "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
-        PfpImg.alt = "Pfp";
-        PfpImg.className = "Pfp";
-        PfpImg.style.width = "50px";
-        MessageElement.appendChild(PfpImg);
-
-        const Timestamp = new Date(Message.timestamp);
-        const TimeString = Timestamp.toLocaleString([], {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        const TimeElement = document.createElement("small");
-        TimeElement.className = "Time";
-        TimeElement.textContent = TimeString;
-        MessageElement.appendChild(TimeElement);
-
-        const Strong = document.createElement("strong");
-        Strong.textContent = Message.username;
-        MessageElement.appendChild(Strong);
-        MessageElement.appendChild(
-          document.createTextNode(`: ${Message.messagecontent}`)
-        );
-
-        if (
-          UserSessionID &&
-          Message.sessionhash &&
-          UserSessionID === Message.sessionhash
-        ) {
-          const Button = document.createElement("button");
-          Button.textContent = "Delete";
-          Button.className = "Delete";
-          Button.onclick = () => {
-            DeleteMessage(Message.messageid);
-          };
-          MessageElement.appendChild(Button);
-        }
-
-        MessageContainer.appendChild(MessageElement);
-        LastMessageIds.add(Message.MessageId);
-        MessageContainer.scrollTop = MessageContainer.scrollHeight;
-      });
-    })
-    .catch((Error) => {
-      console.error("Error:", Error);
+async function FetchMessages() {
+  try {
+    const Response = await fetch(`${ServerUrl}/fetch-messages`, {
+      credentials: "include",
     });
+    const Data = await Response.json();
+    const NewMessageMap = new Map(Data.map((msg) => [msg.messageid, msg]));
+
+    // Remove messages that no longer exist
+    CurrentMessages.forEach((element, id) => {
+      if (!NewMessageMap.has(id)) {
+        element.remove();
+        CurrentMessages.delete(id);
+      }
+    });
+
+    // Add or update messages
+    let messageAppended = false;
+    Data.slice()
+      .reverse()
+      .forEach((Message) => {
+        if (!CurrentMessages.has(Message.messageid)) {
+          const MessageElement = document.createElement("div");
+          MessageElement.className = "Message";
+          MessageElement.dataset.messageid = Message.messageid;
+
+          const PfpImg = document.createElement("img");
+          PfpImg.src =
+            Message.pfpurl ||
+            "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+          PfpImg.alt = "Pfp";
+          PfpImg.className = "Pfp";
+          PfpImg.style.width = "50px";
+          MessageElement.appendChild(PfpImg);
+
+          const Timestamp = new Date(Message.timestamp);
+          const TimeString = Timestamp.toLocaleString([], {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          const TimeElement = document.createElement("small");
+          TimeElement.className = "Time";
+          TimeElement.textContent = TimeString;
+          MessageElement.appendChild(TimeElement);
+
+          const Strong = document.createElement("strong");
+          Strong.textContent = Message.username;
+          MessageElement.appendChild(Strong);
+          MessageElement.appendChild(
+            document.createTextNode(`: ${Message.messagecontent}`)
+          );
+
+          if (
+            UserSessionID &&
+            Message.sessionhash &&
+            UserSessionID === Message.sessionhash
+          ) {
+            const Button = document.createElement("button");
+            Button.textContent = "Delete";
+            Button.className = "Delete";
+            Button.onclick = () => DeleteMessage(Message.messageid);
+            MessageElement.appendChild(Button);
+          }
+
+          // Insert the new message in the correct position
+          let Inserted = false;
+          const Messages = MessageContainer.children;
+          for (let I = 0; I < Messages.length; I++) {
+            const ExistingMessageId = Messages[I].dataset.messageid;
+            const ExistingMessage = NewMessageMap.get(ExistingMessageId);
+            if (ExistingMessage) {
+              const ExistingTimestamp = new Date(ExistingMessage.timestamp);
+              const NewTimestamp = new Date(Message.timestamp);
+              if (NewTimestamp > ExistingTimestamp) {
+                MessageContainer.insertBefore(MessageElement, Messages[I]);
+                Inserted = true;
+                break;
+              }
+            }
+          }
+          if (!Inserted) {
+            MessageContainer.appendChild(MessageElement);
+            messageAppended = true;
+          }
+          CurrentMessages.set(Message.messageid, MessageElement);
+        }
+      });
+
+    // Scroll to bottom if a new message was appended
+    if (messageAppended) {
+      MessageContainer.scrollTop = MessageContainer.scrollHeight;
+    }
+  } catch (Error) {
+    console.error("Error fetching messages:", Error);
+  }
 }
 
 function DeleteMessage(MessageID) {
