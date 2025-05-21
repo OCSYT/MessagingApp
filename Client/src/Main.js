@@ -102,7 +102,7 @@ async function FetchMessages() {
             this.onerror = null;
             this.src = "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
             };
-            
+
           PfpImg.alt = "Pfp";
           PfpImg.className = "Pfp";
           PfpImg.style.width = "50px";
@@ -196,5 +196,8 @@ function DeleteMessage(MessageID) {
 }
 
 setInterval(() => {
+  if(UserSessionID === null) {
+    return;
+  }
   FetchMessages();
 }, 100);
