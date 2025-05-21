@@ -4,9 +4,8 @@ body {
   font-weight: 400;
   color: rgba(255, 255, 255, 0.87);
   background-color: #242424;
-    margin: 0;
+  margin: 0;
   padding: 0;
-
 }
 
 #app {
@@ -38,7 +37,7 @@ h1 {
   gap: 8px;
 }
 
-.Message{
+.Message {
   line-height: 50px;
 }
 
@@ -66,7 +65,7 @@ button:hover {
   color: white;
 }
 
-.Pfp{
+.Pfp {
   width: 50px;
   height: 50px;
   border-radius: 50%;
@@ -74,7 +73,7 @@ button:hover {
   top: 24px;
 }
 
-.Time{
+.Time {
   margin: 10px;
 }
 
@@ -90,6 +89,7 @@ button:hover {
   font-size: 10px;
   position: relative;
   float: right;
+  top: 24px;
 }
 
 .Delete:hover {
@@ -97,7 +97,7 @@ button:hover {
   color: #fff;
 }
 
-input{
+input {
   background-color: black;
   color: white;
   border: none;

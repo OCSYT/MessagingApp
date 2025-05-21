@@ -3,6 +3,8 @@ import cors from "cors";
 import pg from "pg";
 import dotenv from "dotenv";
 import session from "express-session";
+import file_store from "session-file-store";
+import f from "session-file-store";
 dotenv.config();
 
 const App = express();
@@ -14,20 +16,28 @@ const Database = new pg.Pool({
 // Generate random session secret if not found
 let SessionSecret = process.env.SESSION_SECRET;
 if (!SessionSecret) {
-    SessionSecret = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  SessionSecret = Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-App.set('trust proxy', true);
+App.set("trust proxy", true);
+const FileStore = file_store(session);
+
 App.use(
-    session({
-        secret: SessionSecret,
-        saveUninitialized: true,
-        resave: false,
-        cookie: {
-            secure: true,
-            sameSite: false,
-        },
-    })
+  session({
+    store: new FileStore({
+      path: "./sessions",
+      ttl: 1000 * 60 * 60 * 24 * 365 * 5,
+      retries: 0,
+    }),
+    secret: SessionSecret,
+    saveUninitialized: true,
+    resave: false,
+    cookie: {
+      secure: "auto",
+      sameSite: false,
+      maxAge: 1000 * 60 * 60 * 24 * 365 * 5,
+    },
+  })
 );
 
 function CheckDatabaseConnection() {
