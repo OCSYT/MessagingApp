@@ -95,9 +95,14 @@ async function FetchMessages() {
           MessageElement.dataset.messageid = Message.messageid;
 
           const PfpImg = document.createElement("img");
-          PfpImg.src =
+            PfpImg.src =
             Message.pfpurl ||
             "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+            PfpImg.onerror = function () {
+            this.onerror = null;
+            this.src = "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+            };
+            
           PfpImg.alt = "Pfp";
           PfpImg.className = "Pfp";
           PfpImg.style.width = "50px";
