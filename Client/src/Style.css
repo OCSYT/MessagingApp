@@ -87,9 +87,6 @@ button:hover {
   color: white;
   margin: 8px;
   font-size: 10px;
-  position: relative;
-  float: right;
-  top: 24px;
 }
 
 .Delete:hover {
