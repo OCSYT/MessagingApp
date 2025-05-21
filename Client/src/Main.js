@@ -177,25 +177,21 @@ async function AddImages(Text, ParentElement) {
   if (!Matches) return;
 
   for (const Url of Matches) {
-    try {
-      const Response = await fetch(Url, { method: "HEAD" });
-
-      const ContentType = Response.headers.get("Content-Type");
-      if (ContentType && ContentType.startsWith("image/")) {
-        const NewLine = document.createElement("br");
-        ParentElement.appendChild(NewLine);
-        const Img = document.createElement("img");
-        Img.src = Url;
-        Img.alt = "Embedded Image";
-        Img.className = "EmbeddedImage";
-        Img.style.width = "300px";
-        Img.style.display = "block";
-        Img.style.marginTop = "8px";
-        ParentElement.appendChild(Img);
-      }
-    } catch (Error) {
-      console.warn("Failed to check image URL:", Url, Error);
-    }
+    const Img = document.createElement("img");
+    Img.src = Url;
+    Img.alt = "Embedded Image";
+    Img.className = "EmbeddedImage";
+    Img.style.width = "300px";
+    Img.style.display = "block";
+    Img.style.marginTop = "8px";
+    Img.onload = function () {
+      const NewLine = document.createElement("br");
+      ParentElement.appendChild(NewLine);
+      ParentElement.appendChild(Img);
+    };
+    Img.onerror = function () {
+      // Not an image or failed to load, do nothing
+    };
   }
 }
 
