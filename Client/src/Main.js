@@ -3,22 +3,22 @@ const ServerUrl = "https://messagingapp-server.onrender.com"
 //const ServerUrl = "http://localhost:8080";
 const MessageContainer = document.getElementById("MessageContainer");
 const MessageForm = document.getElementById("MessageForm");
-let UserIPHash = null;
+let UserSessionID = null;
 
-async function GetIpHash() {
+async function GetHash() {
   try {
     const Response = await fetch(`${ServerUrl}/get-hash`);
     const Data = await Response.json();
-    return Data.IPHash;
+    return Data.SessionID;
   } catch (Error) {
-    console.error("Error fetching IP hash:", Error);
+    console.error("Error fetching session ID:", Error);
     return null;
   }
 }
 
-GetIpHash().then((IPHash) => {
-  UserIPHash = IPHash;
-  console.log("User IP Hash:", UserIPHash);
+GetHash().then((SessionID) => {
+  UserSessionID = SessionID;
+  console.log("User Hash:", SessionID);
 });
 
 function GetFormData() {
@@ -106,7 +106,7 @@ function FetchMessages() {
         MessageElement.appendChild(Strong);
         MessageElement.appendChild(document.createTextNode(`: ${Message.messagecontent}`));
 
-        if (UserIPHash && Message.iphash && UserIPHash === Message.iphash) {
+        if (UserSessionID && Message.sessionhash && UserSessionID === Message.sessionhash) {
           const Button = document.createElement("button");
           Button.textContent = "Delete";
           Button.className = "Delete";
